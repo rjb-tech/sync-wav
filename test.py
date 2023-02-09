@@ -5,6 +5,8 @@ import scipy.io
 import math
 from typing import List
 
+DESIRED_FRAME_RATE = 60
+
 
 class WavFile:
     def __init__(self, filename: str, fps: int) -> None:
@@ -55,8 +57,12 @@ class WavFile:
 
 
 def main():
-    file = WavFile("test.wav", 60)
+    file = WavFile("test.wav", DESIRED_FRAME_RATE)
     data = file.get_formatted_audio_data()
+
+    # This has 735 elements. This is the data we will use to create the visualization
+    # Create a model that has
+    example_frame = data[0][0]
 
 
 if __name__ == "__main__":
