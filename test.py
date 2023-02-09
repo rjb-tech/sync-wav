@@ -4,6 +4,7 @@ import numpy as np
 import scipy.io
 import math
 from typing import List
+import matplotlib.pyplot as plt
 
 DESIRED_FRAME_RATE = 60
 
@@ -63,6 +64,9 @@ def main():
     # This has 735 elements. This is the data we will use to create the visualization
     # Create a model that has
     example_frame = data[0][0]
+
+    plt.plot([x for x in range(0, len(example_frame))], example_frame)
+    plt.show()
 
 
 if __name__ == "__main__":
