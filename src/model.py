@@ -13,7 +13,7 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
 
         self.latent_upscale = torch.nn.ConvTranspose2d(
-            LATENT_SIZE, IMAGE_SIZE * 16, kernel_size=4, bias=False
+            LATENT_SIZE, IMAGE_SIZE * 16, kernel_size=2, bias=False
         )
         self.latent_norm = torch.nn.BatchNorm2d(IMAGE_SIZE * 16)
         self.latent_activation = torch.nn.ReLU()
@@ -80,7 +80,3 @@ def main():
 
     plt.imshow(transforms.ToPILImage()(y[0]), interpolation="bilinear")
     plt.show()
-
-
-if __name__ == "__main__":
-    main()

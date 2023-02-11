@@ -1,10 +1,15 @@
 from os.path import dirname, join as pjoin
+import os
 from scipy.io import wavfile
 import numpy as np
 import scipy.io
+import torch
 import math
 from typing import List
 import matplotlib.pyplot as plt
+from torchvision import transforms, datasets
+
+from model import Generator
 
 DESIRED_FRAME_RATE = 60
 
@@ -42,7 +47,7 @@ class WavFile:
 
         frames_data = []
         for frame_index in range(0, self.fps):
-            frames_data.append([*self.audio_data[scanner_begin:scanner_end]])
+            frames_data.append(self.audio_data[scanner_begin:scanner_end])
 
             scanner_begin += self.bits_per_frame
             scanner_end += self.bits_per_frame
@@ -54,18 +59,34 @@ class WavFile:
         for second_index in range(0, self.duration_in_seconds):
             formatted_data.append(self.__get_frames_data_for_one_second(second_index))
 
-        return formatted_data
+        return np.array(formatted_data)
 
 
 def main():
-    file = WavFile("test.wav", DESIRED_FRAME_RATE)
+    project_dir = os.getcwd()
+    src_folder = os.path.join(project_dir, "src")
+    data_folder = os.path.join(project_dir, "data")
+    test_file = os.path.join(data_folder, "test.wav")
+
+    file = WavFile(test_file, DESIRED_FRAME_RATE)
     data = file.get_formatted_audio_data()
 
     # This has 735 elements. This is the data we will use to create the visualization
     # Create a model that has
-    example_frame = data[0][0]
+    # example_frame = torch.from_numpy(np.array([data[0][0]]))
 
-    plt.plot([x for x in range(0, len(example_frame))], example_frame)
+    zoop = torch.zeros(1, 735, 1, 1)
+
+    for index in range(0, zoop.shape[1]):
+        current = data[0][0][0]
+        zoop[0][index] = (current[0] + current[1]) / 2
+
+    model = Generator()
+    network_output_image = model.forward(zoop)
+
+    plt.imshow(
+        transforms.ToPILImage()(network_output_image[0]), interpolation="bilinear"
+    )
     plt.show()
 
 
