@@ -15,7 +15,7 @@ from sklearn.preprocessing import MinMaxScaler
 
 from model import Generator
 
-DESIRED_FRAME_RATE = 60
+DESIRED_FRAME_RATE = 10
 
 
 class WavFile:
@@ -107,7 +107,7 @@ def main():
             # )
             # plt.show()
 
-    clip = ImageSequenceClip(frames_folder, fps=file.fps)
+    clip = ImageSequenceClip(frames_folder, fps=DESIRED_FRAME_RATE)
     clip.write_videofile(os.path.join(videos_folder, "output.mp4"), codec="libx264")
 
     command = ["rm", "-rf", "outputs/frames/*.jpg"]
