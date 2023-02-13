@@ -168,6 +168,18 @@ def train_gan(
             #         )
             #     )
 
+    return {
+        "generator": {
+            "state_dict": generator.state_dict(),
+            "optimizer": optimizer_G.state_dict(),
+        },
+        "discriminator": {
+            "state_dict": discriminator.state_dict(),
+            "optimizer": optimizer_D.state_dict(),
+        },
+        "epoch": num_epochs,
+    }
+
 
 def main():
     # Define the transform to apply to the images
@@ -194,11 +206,11 @@ def main():
     gen = Generator()
     disc = Discriminator()
 
-    train_gan(
+    gan = train_gan(
         generator=gen,
         discriminator=disc,
         real_imgs=gpu_loaded_data,
-        num_epochs=50,
+        num_epochs=20,
         device=DEV,
         batch_size=BATCH_SIZE,
     )
@@ -209,6 +221,14 @@ def main():
 
     plt.imshow(transforms.ToPILImage()(x[0]), interpolation="bilinear")
     plt.show()
+
+    to_save = input("Would you like to save the model state? ")
+
+    if to_save == "y" or to_save == "yes":
+        save_name = input("State savename: ")
+        save_path = os.path.join(project_dir, "models", save_name)
+
+        torch.save(gan, save_path)
 
 
 if __name__ == "__main__":
