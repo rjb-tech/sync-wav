@@ -1,8 +1,10 @@
 from os.path import dirname, join as pjoin
+from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
 import os
 from scipy.io import wavfile
 import numpy as np
 import scipy.io
+import subprocess as sp
 from PIL import Image
 import torch
 import math
@@ -104,6 +106,12 @@ def main():
             #     transforms.ToPILImage()(output_image[0]), interpolation="bilinear"
             # )
             # plt.show()
+
+    clip = ImageSequenceClip(frames_folder, fps=file.fps)
+    clip.write_videofile(os.path.join(videos_folder, "output.mp4"), codec="libx264")
+
+    command = ["rm", "-rf", "outputs/frames/*.jpg"]
+    sp.run(command, check=True)
 
 
 if __name__ == "__main__":
