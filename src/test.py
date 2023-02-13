@@ -3,11 +3,13 @@ import os
 from scipy.io import wavfile
 import numpy as np
 import scipy.io
+from PIL import Image
 import torch
 import math
 from typing import List
 import matplotlib.pyplot as plt
 from torchvision import transforms, datasets
+from sklearn.preprocessing import MinMaxScaler
 
 from model import Generator
 
@@ -66,28 +68,42 @@ def main():
     project_dir = os.getcwd()
     src_folder = os.path.join(project_dir, "src")
     data_folder = os.path.join(project_dir, "data")
+    models_folder = os.path.join(project_dir, "models")
+    outputs_folder = os.path.join(project_dir, "outputs")
+    videos_folder = os.path.join(outputs_folder, "videos")
+    frames_folder = os.path.join(outputs_folder, "frames")
     test_file = os.path.join(data_folder, "test.wav")
+    model_file = os.path.join(models_folder, "001")
+    model_state = torch.load(model_file)["generator"]["state_dict"]
 
     file = WavFile(test_file, DESIRED_FRAME_RATE)
     data = file.get_formatted_audio_data()
 
+    scaler = MinMaxScaler(feature_range=(-1, 1), copy=False)
+
     # This has 735 elements. This is the data we will use to create the visualization
     # Create a model that has
-    # example_frame = torch.from_numpy(np.array([data[0][0]]))
-
-    zoop = torch.zeros(1, 735, 1, 1)
-
-    for index in range(0, zoop.shape[1]):
-        current = data[0][0][0]
-        zoop[0][index] = (current[0] + current[1]) / 2
 
     model = Generator()
-    network_output_image = model.forward(zoop)
+    model.load_state_dict(model_state)
+    summed_data = np.array(np.apply_along_axis(lambda x: np.sum(x), 3, data))
 
-    plt.imshow(
-        transforms.ToPILImage()(network_output_image[0]), interpolation="bilinear"
-    )
-    plt.show()
+    for second in range(file.duration_in_seconds):
+        for frame in range(file.fps):
+            scaled_data = scaler.fit_transform(
+                np.reshape(summed_data[second][frame], (-1, 1))
+            )
+
+            zoop = torch.from_numpy(np.reshape(scaled_data.astype("float32"), (1, -1)))
+
+            output_image_data = model.forward(zoop)
+            image = transforms.ToPILImage()(output_image_data[0])
+            image.save(os.path.join(frames_folder, f"{second}-{frame}.jpg"), "JPEG")
+
+            # plt.imshow(
+            #     transforms.ToPILImage()(output_image[0]), interpolation="bilinear"
+            # )
+            # plt.show()
 
 
 if __name__ == "__main__":
