@@ -1,5 +1,5 @@
 from os.path import dirname, join as pjoin
-from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
+from moviepy.editor import ImageSequenceClip, AudioFileClip, CompositeAudioClip
 import os
 from scipy.io import wavfile
 import numpy as np
@@ -12,6 +12,7 @@ from typing import List
 import matplotlib.pyplot as plt
 from torchvision import transforms, datasets
 from sklearn.preprocessing import MinMaxScaler
+from tqdm import tqdm
 
 from model import Generator
 
@@ -19,11 +20,11 @@ DESIRED_FRAME_RATE = 10
 
 
 class WavFile:
-    def __init__(self, filename: str, fps: int) -> None:
+    def __init__(self, filename: str) -> None:
         self.sample_rate, self.audio_data = wavfile.read(filename)
 
         self.duration_in_seconds = math.floor(len(self.audio_data) / self.sample_rate)
-        self.fps = fps if fps == 30 or fps == 60 else 60
+        self.fps = DESIRED_FRAME_RATE
         self.bits_per_frame = math.floor(self.sample_rate / self.fps)
 
         # This is how much data we will have to vectorize for each video frame within a second of audio
@@ -73,12 +74,13 @@ def main():
     models_folder = os.path.join(project_dir, "models")
     outputs_folder = os.path.join(project_dir, "outputs")
     videos_folder = os.path.join(outputs_folder, "videos")
+    audio_folder = os.path.join(data_folder, "audio")
+    test_file = os.path.join(audio_folder, "cosmic_girl.wav")
     frames_folder = os.path.join(outputs_folder, "frames")
-    test_file = os.path.join(data_folder, "test.wav")
-    model_file = os.path.join(models_folder, "001")
+    model_file = os.path.join(models_folder, "009_10fps")
     model_state = torch.load(model_file)["generator"]["state_dict"]
 
-    file = WavFile(test_file, DESIRED_FRAME_RATE)
+    file = WavFile(test_file)
     data = file.get_formatted_audio_data()
 
     scaler = MinMaxScaler(feature_range=(-1, 1), copy=False)
@@ -90,7 +92,7 @@ def main():
     model.load_state_dict(model_state)
     summed_data = np.array(np.apply_along_axis(lambda x: np.sum(x), 3, data))
 
-    for second in range(file.duration_in_seconds):
+    for second in tqdm(range(file.duration_in_seconds)):
         for frame in range(file.fps):
             scaled_data = scaler.fit_transform(
                 np.reshape(summed_data[second][frame], (-1, 1))
@@ -108,7 +110,19 @@ def main():
             # plt.show()
 
     clip = ImageSequenceClip(frames_folder, fps=DESIRED_FRAME_RATE)
-    clip.write_videofile(os.path.join(videos_folder, "output.mp4"), codec="libx264")
+    audio = AudioFileClip(test_file)
+    actual_audio = CompositeAudioClip([audio])
+
+    clip.audio = actual_audio
+    clip.write_videofile(
+        os.path.join(videos_folder, "output.mp4"),
+        codec="libx264",
+        audio=True,
+        ffmpeg_params=[
+            "-vf",
+            f"minterpolate=fps={DESIRED_FRAME_RATE*3}:mi_mode=blend",
+        ],
+    )
 
     command = ["rm", "-rf", "outputs/frames/*.jpg"]
     sp.run(command, check=True)

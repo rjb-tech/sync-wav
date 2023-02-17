@@ -8,14 +8,14 @@ from tqdm import tqdm
 import torchvision
 from torchvision import transforms
 
-LATENT_SIZE = 735
+LATENT_SIZE = 4410
 IMAGE_SIZE = 150
-BATCH_SIZE = 25
-DEV = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+BATCH_SIZE = 20
+DEV = torch.device("cpu")
 
 
 def preprocess(x, y):
-    return x.view(-1, 3, 150, 150).to(DEV), y.to(DEV)
+    return x.view(-1, 3, IMAGE_SIZE, IMAGE_SIZE).to(DEV), y.to(DEV)
 
 
 class WrappedDataLoader:
@@ -105,19 +105,18 @@ def train_gan(
     num_epochs,
     batch_size,
     print_every=100,
-    latent_dim=735,
+    latent_dim=LATENT_SIZE,
 ):
     generator.to(DEV)
     discriminator.to(DEV)
 
     # Initialize the optimizers and loss function
-    optimizer_G = torch.optim.Adam(
-        generator.parameters(), lr=0.0002, betas=(0.5, 0.999)
-    )
-    optimizer_D = torch.optim.Adam(
-        discriminator.parameters(), lr=0.0002, betas=(0.5, 0.999)
-    )
+    optimizer_G = torch.optim.Adam(generator.parameters(), lr=0.002)
+    optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=0.002)
     criterion = torch.nn.BCELoss()
+
+    disc_loss_by_epoch = []
+    gen_loss_by_epoch = []
 
     # Start training
     for epoch in tqdm(range(num_epochs)):
@@ -166,16 +165,22 @@ def train_gan(
             #             d_loss.item(),
             #             g_loss.item(),
             #         )
+            #
             #     )
+
+        disc_loss_by_epoch.append(d_loss.item())
+        gen_loss_by_epoch.append(g_loss.item())
 
     return {
         "generator": {
             "state_dict": generator.state_dict(),
             "optimizer": optimizer_G.state_dict(),
+            "loss": gen_loss_by_epoch,
         },
         "discriminator": {
             "state_dict": discriminator.state_dict(),
             "optimizer": optimizer_D.state_dict(),
+            "loss": disc_loss_by_epoch,
         },
         "epoch": num_epochs,
     }
