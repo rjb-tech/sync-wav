@@ -16,7 +16,8 @@ from tqdm import tqdm
 
 from model import Generator
 
-DESIRED_FRAME_RATE = 10
+DESIRED_FRAME_RATE = 60
+DEV = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 
 class WavFile:
@@ -68,6 +69,8 @@ class WavFile:
 
 
 def main():
+    audio_filename = "cosmic_girl"
+    model_filename = "015_60fps_favereds_blops"
     project_dir = os.getcwd()
     src_folder = os.path.join(project_dir, "src")
     data_folder = os.path.join(project_dir, "data")
@@ -75,9 +78,9 @@ def main():
     outputs_folder = os.path.join(project_dir, "outputs")
     videos_folder = os.path.join(outputs_folder, "videos")
     audio_folder = os.path.join(data_folder, "audio")
-    test_file = os.path.join(audio_folder, "cosmic_girl.wav")
+    test_file = os.path.join(audio_folder, f"{audio_filename}.wav")
     frames_folder = os.path.join(outputs_folder, "frames")
-    model_file = os.path.join(models_folder, "009_10fps")
+    model_file = os.path.join(models_folder, model_filename)
     model_state = torch.load(model_file)["generator"]["state_dict"]
 
     file = WavFile(test_file)
@@ -88,11 +91,11 @@ def main():
     # This has 735 elements. This is the data we will use to create the visualization
     # Create a model that has
 
-    model = Generator()
+    model = Generator().to(DEV)
     model.load_state_dict(model_state)
     summed_data = np.array(np.apply_along_axis(lambda x: np.sum(x), 3, data))
 
-    for second in tqdm(range(file.duration_in_seconds)):
+    for second in tqdm(range(10)):
         for frame in range(file.fps):
             scaled_data = scaler.fit_transform(
                 np.reshape(summed_data[second][frame], (-1, 1))
@@ -100,7 +103,7 @@ def main():
 
             zoop = torch.from_numpy(np.reshape(scaled_data.astype("float32"), (1, -1)))
 
-            output_image_data = model.forward(zoop)
+            output_image_data = model.forward(zoop.to(DEV))
             image = transforms.ToPILImage()(output_image_data[0])
             image.save(os.path.join(frames_folder, f"{second}-{frame}.jpg"), "JPEG")
 
@@ -115,13 +118,10 @@ def main():
 
     clip.audio = actual_audio
     clip.write_videofile(
-        os.path.join(videos_folder, "output.mp4"),
+        os.path.join(videos_folder, f"{audio_filename}_{model_filename}_raw.mp4"),
         codec="libx264",
-        audio=True,
-        ffmpeg_params=[
-            "-vf",
-            f"minterpolate=fps={DESIRED_FRAME_RATE*3}:mi_mode=blend",
-        ],
+        audio=False,
+        ffmpeg_params=["-vf", "minterpolate=fps=8"],
     )
 
     command = ["rm", "-rf", "outputs/frames/*.jpg"]

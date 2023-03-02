@@ -8,10 +8,10 @@ from tqdm import tqdm
 import torchvision
 from torchvision import transforms
 
-LATENT_SIZE = 4410
+LATENT_SIZE = 735
 IMAGE_SIZE = 150
-BATCH_SIZE = 20
-DEV = torch.device("cpu")
+BATCH_SIZE = 10
+DEV = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 
 def preprocess(x, y):
@@ -111,8 +111,8 @@ def train_gan(
     discriminator.to(DEV)
 
     # Initialize the optimizers and loss function
-    optimizer_G = torch.optim.Adam(generator.parameters(), lr=0.002)
-    optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=0.002)
+    optimizer_G = torch.optim.Adam(generator.parameters(), lr=0.0004)
+    optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=0.0002)
     criterion = torch.nn.BCELoss()
 
     disc_loss_by_epoch = []
@@ -215,7 +215,7 @@ def main():
         generator=gen,
         discriminator=disc,
         real_imgs=gpu_loaded_data,
-        num_epochs=20,
+        num_epochs=25,
         device=DEV,
         batch_size=BATCH_SIZE,
     )
@@ -229,7 +229,7 @@ def main():
 
     to_save = input("Would you like to save the model state? ")
 
-    if to_save == "y" or to_save == "yes":
+    if to_save.lower() == "y" or to_save.lower() == "yes":
         save_name = input("State savename: ")
         save_path = os.path.join(project_dir, "models", save_name)
 
