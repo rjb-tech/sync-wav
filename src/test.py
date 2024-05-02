@@ -69,8 +69,8 @@ class WavFile:
 
 
 def main():
-    audio_filename = "cosmic_girl"
-    model_filename = "015_60fps_favereds_blops"
+    audio_filename = "rock_your_body"
+    model_filename = "blip_blop"
     project_dir = os.getcwd()
     src_folder = os.path.join(project_dir, "src")
     data_folder = os.path.join(project_dir, "data")
@@ -89,8 +89,6 @@ def main():
     scaler = MinMaxScaler(feature_range=(-1, 1), copy=False)
 
     # This has 735 elements. This is the data we will use to create the visualization
-    # Create a model that has
-
     model = Generator().to(DEV)
     model.load_state_dict(model_state)
     summed_data = np.array(np.apply_along_axis(lambda x: np.sum(x), 3, data))
@@ -100,15 +98,16 @@ def main():
             scaled_data = scaler.fit_transform(
                 np.reshape(summed_data[second][frame], (-1, 1))
             )
-
+            
             zoop = torch.from_numpy(np.reshape(scaled_data.astype("float32"), (1, -1)))
 
             output_image_data = model.forward(zoop.to(DEV))
+            print(output_image_data.shape)
             image = transforms.ToPILImage()(output_image_data[0])
             image.save(os.path.join(frames_folder, f"{second}-{frame}.jpg"), "JPEG")
 
             # plt.imshow(
-            #     transforms.ToPILImage()(output_image[0]), interpolation="bilinear"
+            #     transforms.ToPILImage()(output_image_data[0]), interpolation="bilinear"
             # )
             # plt.show()
 

@@ -10,12 +10,20 @@ from torchvision import transforms
 
 LATENT_SIZE = 735
 IMAGE_SIZE = 150
-BATCH_SIZE = 10
+BATCH_SIZE = 100
 DEV = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 
 def preprocess(x, y):
     return x.view(-1, 3, IMAGE_SIZE, IMAGE_SIZE).to(DEV), y.to(DEV)
+
+def weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        nn.init.kaiming_normal_(m.weight.data, nonlinearity='relu')
+    elif classname.find('BatchNorm') != -1:
+        nn.init.normal_(m.weight.data, 1.0, 0.02)
+        nn.init.constant_(m.bias.data, 0)
 
 
 class WrappedDataLoader:
@@ -121,13 +129,12 @@ def train_gan(
     # Start training
     for epoch in tqdm(range(num_epochs)):
         for real_batch, _ in real_imgs:
-            # Reset gradients
-            optimizer_G.zero_grad()
-            optimizer_D.zero_grad()
-
             # Generate fake images
             z = torch.randn(batch_size, latent_dim).to(device)
             fake_imgs = generator.forward(z)
+
+            # Reset gradients
+            optimizer_D.zero_grad()
 
             # Train the discriminator on real images
             validity_real = discriminator.forward(real_batch)
@@ -143,6 +150,9 @@ def train_gan(
             # Backpropagate the discriminator loss
             d_loss.backward()
             optimizer_D.step()
+
+            # Reset gradients
+            optimizer_G.zero_grad()
 
             # Train the generator
             z = torch.randn(batch_size, latent_dim).to(device)
@@ -192,7 +202,7 @@ def main():
         [
             # transforms.Resize(64),
             transforms.ToTensor(),
-            transforms.Normalize([0.5], [0.5]),
+            transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5]),
         ]
     )
 
@@ -211,11 +221,14 @@ def main():
     gen = Generator()
     disc = Discriminator()
 
+    gen.apply(weights_init)
+    disc.apply(weights_init)
+
     gan = train_gan(
         generator=gen,
         discriminator=disc,
         real_imgs=gpu_loaded_data,
-        num_epochs=25,
+        num_epochs=200,
         device=DEV,
         batch_size=BATCH_SIZE,
     )
